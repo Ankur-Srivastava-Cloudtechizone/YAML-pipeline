@@ -1,0 +1,87 @@
+name: Infra deployment of RG & Storage
+trigger: none
+pool: Default
+stages:
+  - stage: terraform_init_plan
+    displayName: terraform init
+    jobs:
+      - job:
+        displayName: 
+        steps:
+        - task: TerraformTaskV4@4
+          displayName: Terraform-init
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/azure-infra/env/dev'
+            backendServiceArm: 'pipeline-connection'
+            backendAzureRmResourceGroupName: 'rg-tfstate'
+            backendAzureRmStorageAccountName: 'storagetfstatecloud'
+            backendAzureRmContainerName: 'tfstate'
+            backendAzureRmKey: 'yamlpipeline.tfstate'
+        - task: TerraformTaskV4@4
+          displayName: Terraform-validate
+          inputs:
+            provider: 'azurerm'
+            command: 'validate'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/azure-infra/env/dev'
+  - stage: terraform_plan
+    displayName: terraform-plan
+    jobs:
+      - job:
+        displayName:
+        steps:
+        - task: TerraformTaskV4@4
+          displayName: Terraform-init
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/azure-infra/env/dev'
+            backendServiceArm: 'pipeline-connection'
+            backendAzureRmResourceGroupName: 'rg-tfstate'
+            backendAzureRmStorageAccountName: 'storagetfstatecloud'
+            backendAzureRmContainerName: 'tfstate'
+            backendAzureRmKey: 'yamlpipeline.tfstate'
+        - task: TerraformTaskV4@4
+          displayName: Terraform Plan
+          inputs:
+            provider: 'azurerm'
+            command: 'plan'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/azure-infra/env/dev'
+            environmentServiceNameAzureRM: 'pipeline-connection'
+  - stage: manual_validation
+    displayName: Manual Validation
+    jobs:
+      - job:
+        pool: server
+        displayName:
+        steps:
+        - task: ManualValidation@1
+          displayName: Manual Validation
+          inputs:
+            notifyUsers: 'cloudtechizone@outlook.com'
+            approvers: 'cloudtechizone@outlook.com'
+  - stage: terraform_apply
+    displayName: terraform apply
+    jobs:
+      - job:
+        displayName:
+        steps:
+        - task: TerraformTaskV4@4
+          displayName: terraform-init-apply
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/azure-infra/env/dev'
+            backendServiceArm: 'pipeline-connection'
+            backendAzureRmResourceGroupName: 'rg-tfstate'
+            backendAzureRmStorageAccountName: 'storagetfstatecloud'
+            backendAzureRmContainerName: 'tfstate'
+            backendAzureRmKey: 'yamlpipeline.tfstate'
+        - task: TerraformTaskV4@4
+          displayName: terraform apply
+          inputs:
+            provider: 'azurerm'
+            command: 'apply'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/azure-infra/env/dev'
+            environmentServiceNameAzureRM: 'pipeline-connection'
